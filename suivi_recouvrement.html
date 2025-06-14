@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi de recouvrement des loyers</title>
+    <link rel="icon" href="sg_immo_logo.ico" type="image/x-icon">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .header-content {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        
+        .logo {
+            height: 60px;
+            width: auto;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            color: #495057;
+            min-width: fit-content;
+        }
+        
+        input, select, button {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        th, td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            font-weight: 600;
+            color: #495057;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tr:hover {
+            background-color: rgba(102, 126, 234, 0.05);
+        }
+        
+        .status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .status-distribution { background: #e3f2fd; color: #1976d2; }
+        .status-attente { background: #fff3e0; color: #f57c00; }
+        .status-relance1 { background: #ffebee; color: #d32f2f; }
+        .status-relance2 { background: #fce4ec; color: #c2185b; }
+        .status-demeure { background: #f3e5f5; color: #7b1fa2; }
+        .status-preavis { background: #e8f5e8; color: #388e3c; }
+        .status-paye { background: #e8f5e8; color: #2e7d32; }
+        
+        .action-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            margin: 2px;
+            min-width: 70px;
+        }
+        
+        .legend {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .legend h3 {
+            margin: 0 0 15px 0;
+            color: #495057;
+        }
+        
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            font-size: 13px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .export-section {
+            padding: 20px;
+            background: #f8f9fa;
+            text-align: center;
+        }
+        
+        .export-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            padding: 12px 24px;
+            font-size: 16px;
+        }
+        
+        .filter-section {
+            padding: 15px 20px;
+            background: #e9ecef;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .history-btn {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="sg_immo_logo.ico" alt="Logo SC CONSULTING IMMO" class="logo">
+            <div class="header-content">
+                <h1>RECOUVREMENT DES LOYERS</h1>
+                <p>Gestion et suivi de la procédure de recouvrement mensuelle</p>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Nom du client:</label>
+                <input type="text" id="nomClient" placeholder="Nom complet">
+            </div>
+            <div class="control-group">
+                <label>Logement:</label>
+                <input type="text" id="logement" placeholder="Référence/Adresse">
+            </div>
+            <div class="control-group">
+                <label>Téléphone:</label>
+                <input type="tel" id="telephone" placeholder="Numéro de téléphone">
+            </div>
+            <div class="control-group">
+                <label>Montant à payer:</label>
+                <input type="number" id="montantLoyer" placeholder="0">
+            </div>
+            <div class="control-group">
+                <label>Date personnalisée:</label>
+                <input type="date" id="datePersonnalisee">
+            </div>
+            <div class="control-group">
+                <label>Mois:</label>
+                <select id="moisConcerne">
+                    <option value="">Sélectionner</option>
+                    <option value="Janvier">Janvier</option>
+                    <option value="Février">Février</option>
+                    <option value="Mars">Mars</option>
+                    <option value="Avril">Avril</option>
+                    <option value="Mai">Mai</option>
+                    <option value="Juin">Juin</option>
+                    <option value="Juillet">Juillet</option>
+                    <option value="Août">Août</option>
+                    <option value="Septembre">Septembre</option>
+                    <option value="Octobre">Octobre</option>
+                    <option value="Novembre">Novembre</option>
+                    <option value="Décembre">Décembre</option>
+                </select>
+            
+            <div class="control-group">
+                <label>Commentaire:</label>
+                <input type="text" id="commentaire" placeholder="Note ou commentaire...">
+            </div>
+
+            </div>
+            <button onclick="ajouterClient()">➕ Ajouter Client</button>
+            <button onclick="viderFormulaire()">🗑️ Vider</button>
+        </div>
+        
+        <div class="filter-section">
+            <div class="control-group">
+                <label>Filtrer par statut:</label>
+                <select id="filtreStatut" onchange="filtrerTableau()">
+                    <option value="">Tous les statuts</option>
+                    <option value="Distribution">Distribution</option>
+                    <option value="En attente">En attente</option>
+                    <option value="1ère Relance">1ère Relance</option>
+                    <option value="2ème Relance">2ème Relance</option>
+                    <option value="Mise en Demeure">Mise en Demeure</option>
+                    <option value="Préavis">Préavis</option>
+                    <option value="Payé">Payé</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Recherche:</label>
+                <input type="text" id="recherche" placeholder="Rechercher..." oninput="filtrerTableau()">
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table id="tableauSuivi">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Logement</th>
+                        <th>Téléphone</th>
+                        <th>Montant</th>
+                        <th>Mois</th>
+                        <th>Date Pers.</th>
+                        <th>Statut</th>
+                        <th>Distribution<br>(20-25 n)</th>
+                        <th>1ère Relance<br>(6-10 n+1)</th>
+                        <th>2ème Relance<br>(26-30 n+1)</th>
+                        <th>Mise en Demeure<br>(6-10 n+2)</th>
+                        <th>Préavis</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="corpstableau">
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="legend">
+            <h3>📋 Procédure de Recouvrement</h3>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <span class="status status-distribution">Distribution</span>
+                    <span>20-25 du mois : Distribution des appels de loyer</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status status-attente">Loyer</span>
+                    <span>1-5 du mois suivant : Période officielle des reglements de loyer</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status status-relance1">1ère Relance</span>
+                    <span>6-10 du mois : Relance téléphonique pour des impayés</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status status-relance2">2ème Relance</span>
+                    <span>26-30 du mois : Deuxième relance téléphonique pour des impayés</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status status-demeure">Mise en Demeure</span>
+                    <span>6-10 du mois suivant : Envoi des mises en demeure</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status status-preavis">Préavis</span>
+                    <span>Si pas de réaction : Préavis de résiliation</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="export-section">
+            <button class="export-btn" onclick="exporterExcel()">📊 Exporter vers Excel</button>
+            <p style="margin-top: 10px; color: #6c757d; font-size: 13px;">
+                Téléchargez vos données au format Excel pour archivage ou impression
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let clients = [];
+        let idCounter = 1;
+        let actionHistory = [];
+        const STORAGE_KEY = 'suivi_recouvrement_data';
+
+        // Charger les données depuis le localStorage
+        function chargerDonnees() {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            if (savedData) {
+                clients = JSON.parse(savedData);
+                if (clients.length > 0) {
+                    idCounter = Math.max(...clients.map(c => c.id)) + 1;
+                }
+                afficherTableau();
+            }
+        }
+
+        // Sauvegarder les données dans le localStorage
+        function sauvegarderDonnees() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+            // Sauvegarder aussi dans l'historique
+            actionHistory.push(JSON.stringify(clients));
+            if (actionHistory.length > 20) {
+                actionHistory.shift(); // Garder seulement les 20 dernières actions
+            }
+        }
+
+        function ajouterClient() {
+            const nom = document.getElementById('nomClient').value.trim();
+            const logement = document.getElementById('logement').value.trim();
+            const telephone = document.getElementById('telephone').value.trim();
+            const montant = document.getElementById('montantLoyer').value;
+            const datePerso = document.getElementById('datePersonnalisee').value;
+            const mois = document.getElementById('moisConcerne').value;
+            const commentaire = document.getElementById('commentaire').value.trim();
+            
+            if (!nom || !logement || !montant || !mois) {
+                alert('Veuillez remplir tous les champs obligatoires');
+                return;
+            }
+            
+            const client = {
+                id: idCounter++,
+                nom: nom,
+                logement: logement,
+                telephone: telephone,
+                montant: parseFloat(montant),
+                mois: mois,
+                datePersonnalisee: datePerso,
+                commentaire: '', // NOUVEAU CHAMP
+                statut: 'Distribution',
+                distribution: false,
+                relance1: false,
+                relance2: false,
+                miseEnDemeure: false,
+                preavis: false,
+                commentaire: commentaire,
+                dateCreation: new Date().toLocaleDateString('fr-FR')
+            };
+            
+            clients.push(client);
+            sauvegarderDonnees();
+            afficherTableau();
+            viderFormulaire();
+        }
+        
+        function viderFormulaire() {
+            document.getElementById('nomClient').value = '';
+            document.getElementById('logement').value = '';
+            document.getElementById('telephone').value = '';
+            document.getElementById('montantLoyer').value = '';
+            document.getElementById('datePersonnalisee').value = '';
+            document.getElementById('moisConcerne').value = '';
+            document.getElementById('commentaire').value = ''; // NOUVEAU
+        }
+        
+        function filtrerTableau() {
+            const filtreStatut = document.getElementById('filtreStatut').value.toLowerCase();
+            const recherche = document.getElementById('recherche').value.toLowerCase();
+            
+            const lignes = document.querySelectorAll('#corpstableau tr');
+            lignes.forEach(ligne => {
+                const statut = ligne.querySelector('td:nth-child(7)').textContent.toLowerCase();
+                const texteLigne = ligne.textContent.toLowerCase();
+                
+                const correspondStatut = !filtreStatut || statut.includes(filtreStatut);
+                const correspondRecherche = !recherche || texteLigne.includes(recherche);
+                
+                ligne.style.display = (correspondStatut && correspondRecherche) ? '' : 'none';
+            });
+        }
+        
+        function afficherTableau() {
+            const tbody = document.getElementById('corpstableau');
+            tbody.innerHTML = '';
+            
+            clients.forEach(client => {
+                const row = document.createElement('tr');
+                // Ajouter l'attribut title pour l'info-bulle
+                row.setAttribute('title', client.commentaire || 'Aucun commentaire');
+                row.style.cursor = client.commentaire ? 'help' : 'default';
+
+                row.innerHTML = `
+                    <td><strong>${client.nom}</strong></td>
+                    <td>${client.logement}</td>
+                    <td>${client.telephone || '-'}</td>
+                    <td style="cursor: pointer;" onclick="modifierMontant(${client.id})">${client.montant.toLocaleString('fr-FR')} FCFA ✏️</td>
+                    <td style="cursor: pointer;" onclick="modifierMois(${client.id})">${client.mois} ✏️</td>
+                    <td>${client.datePersonnalisee || '-'}</td>
+                    <td><span class="status status-${client.statut.toLowerCase().replace(/\s+/g, '').replace('è', 'e').replace('é', 'e')}">${client.statut}</span></td>
+                    <td>${client.distribution ? '✅' : '⏳'}</td>
+                    <td>${client.relance1 ? '✅ ' + (client.dateRelance1 || '') : '⏳'}</td>
+                    <td>${client.relance2 ? '✅ ' + (client.dateRelance2 || '') : '⏳'}</td>
+                    <td>${client.miseEnDemeure ? '✅ ' + (client.dateMiseEnDemeure || '') : '⏳'}</td>
+                    <td>${client.preavis ? '✅ ' + (client.datePreavis || '') : '⏳'}</td>
+                    <td>
+                        <button class="action-btn" onclick="changerStatut(${client.id})" style="background: #17a2b8;">Suivant</button>
+                        <button class="action-btn" onclick="marquerPaye(${client.id})" style="background: #28a745;">Payé</button>
+                        <button class="action-btn" onclick="modifierCommentaire(${client.id})" style="background: #ffc107;">Note</button>
+                        <button class="action-btn" onclick="supprimerClient(${client.id})" style="background: #dc3545;">Suppr.</button>
+                        <button class="action-btn" onclick="annulerStatut(${client.id})" style="background: #6c757d;">Annuler</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function changerStatut(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+            
+            // Sauvegarder l'état avant modification
+            const avantModification = JSON.parse(JSON.stringify(client));
+            
+            const aujourdhui = new Date().toLocaleDateString('fr-FR');
+            
+            switch(client.statut) {
+                case 'Distribution':
+                    client.statut = 'En attente';
+                    client.distribution = true;
+                    break;
+                case 'En attente':
+                    client.statut = '1ère Relance';
+                    client.relance1 = true;
+                    client.dateRelance1 = aujourdhui;
+                    break;
+                case '1ère Relance':
+                    client.statut = '2ème Relance';
+                    client.relance2 = true;
+                    client.dateRelance2 = aujourdhui;
+                    break;
+                case '2ème Relance':
+                    client.statut = 'Mise en Demeure';
+                    client.miseEnDemeure = true;
+                    client.dateMiseEnDemeure = aujourdhui;
+                    break;
+                case 'Mise en Demeure':
+                    client.statut = 'Préavis';
+                    client.preavis = true;
+                    client.datePreavis = aujourdhui;
+                    break;
+            }
+            
+            // Ajouter à l'historique
+            actionHistory.push({
+                type: 'changerStatut',
+                id: id,
+                avant: avantModification,
+                apres: JSON.parse(JSON.stringify(client))
+            });
+            
+            sauvegarderDonnees();
+            afficherTableau();
+        }
+        
+        function annulerStatut(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+            
+            // Trouver la dernière action pour ce client
+            for (let i = actionHistory.length - 1; i >= 0; i--) {
+                const action = actionHistory[i];
+                if (action.id === id) {
+                    // Restaurer l'état précédent
+                    Object.assign(client, action.avant);
+                    // Supprimer cette action de l'historique
+                    actionHistory.splice(i, 1);
+                    sauvegarderDonnees();
+                    afficherTableau();
+                    return;
+                }
+            }
+            
+            alert("Aucune action précédente trouvée pour ce client.");
+        }
+        
+        function annulerDerniereAction() {
+            if (actionHistory.length === 0) {
+                alert("Aucune action à annuler.");
+                return;
+            }
+            
+            const derniereAction = actionHistory.pop();
+            
+            if (derniereAction.type === 'ajout') {
+                // Supprimer le client ajouté
+                clients = clients.filter(c => c.id !== derniereAction.id);
+            } else if (derniereAction.type === 'suppression') {
+                // Restaurer le client supprimé
+                clients.push(derniereAction.client);
+            } else if (derniereAction.type === 'modification') {
+                // Restaurer l'état précédent
+                const client = clients.find(c => c.id === derniereAction.id);
+                if (client) {
+                    Object.assign(client, derniereAction.avant);
+                }
+            }
+            
+            sauvegarderDonnees();
+            afficherTableau();
+            alert("Dernière action annulée.");
+        }
+        
+        function marquerPaye(id) {
+            const client = clients.find(c => c.id === id);
+            if (client) {
+                // Sauvegarder l'état avant modification
+                const avantModification = JSON.parse(JSON.stringify(client));
+                
+                client.statut = 'Payé';
+                client.datePaiement = new Date().toLocaleDateString('fr-FR');
+                
+                // Ajouter à l'historique
+                actionHistory.push({
+                    type: 'marquerPaye',
+                    id: id,
+                    avant: avantModification,
+                    apres: JSON.parse(JSON.stringify(client))
+                });
+                
+                sauvegarderDonnees();
+                afficherTableau();
+            }
+        }
+        
+        function supprimerClient(id) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
+                const clientIndex = clients.findIndex(c => c.id === id);
+                if (clientIndex !== -1) {
+                    const clientSupprime = clients[clientIndex];
+                    
+                    // Ajouter à l'historique
+                    actionHistory.push({
+                        type: 'suppression',
+                        id: id,
+                        client: JSON.parse(JSON.stringify(clientSupprime))
+                    });
+                    
+                    clients.splice(clientIndex, 1);
+                    sauvegarderDonnees();
+                    afficherTableau();
+                }
+            }
+        }
+
+        function modifierMontant(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+            
+            const nouveauMontant = prompt(`Modifier le montant pour ${client.nom}:`, client.montant);
+            if (nouveauMontant !== null && !isNaN(nouveauMontant) && nouveauMontant > 0) {
+                client.montant = parseFloat(nouveauMontant);
+                sauvegarderDonnees();
+                afficherTableau();
+            }
+        }
+
+        function modifierMois(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+            
+            const moisOptions = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+            
+            let choix = prompt(`Modifier le mois pour ${client.nom}:\n` + 
+                            moisOptions.map((m, i) => `${i+1}. ${m}`).join('\n') + 
+                            `\nMois actuel: ${client.mois}\nEntrez le numéro (1-12):`);
+            
+            if (choix !== null) {
+                const index = parseInt(choix) - 1;
+                if (index >= 0 && index < 12) {
+                    client.mois = moisOptions[index];
+                    sauvegarderDonnees();
+                    afficherTableau();
+                }
+            }
+        }
+
+        function modifierCommentaire(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+            
+            const nouveauCommentaire = prompt(`Commentaire pour ${client.nom}:`, client.commentaire || '');
+            if (nouveauCommentaire !== null) {
+                client.commentaire = nouveauCommentaire;
+                sauvegarderDonnees();
+                afficherTableau();
+            }
+        }
+        
+        function exporterExcel() {
+            // Créer le contenu HTML du tableau pour Excel
+            let htmlContent = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                      xmlns:x="urn:schemas-microsoft-com:office:excel" 
+                      xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="UTF-8">
+                    <!--[if gte mso 9]>
+                    <xml>
+                        <x:ExcelWorkbook>
+                            <x:ExcelWorksheets>
+                                <x:ExcelWorksheet>
+                                    <x:Name>Suivi Recouvrement</x:Name>
+                                    <x:WorksheetSource HRef="sheet001.htm"/>
+                                </x:ExcelWorksheet>
+                            </x:ExcelWorksheets>
+                        </x:ExcelWorkbook>
+                    </xml>
+                    <![endif]-->
+                    <style>
+                        table { border-collapse: collapse; width: 100%; }
+                        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+                        th { background-color: #f2f2f2; font-weight: bold; }
+                        .status-distribution { background: #e3f2fd; }
+                        .status-attente { background: #fff3e0; }
+                        .status-relance1 { background: #ffebee; }
+                        .status-relance2 { background: #fce4ec; }
+                        .status-demeure { background: #f3e5f5; }
+                        .status-preavis { background: #e8f5e8; }
+                        .status-paye { background: #e8f5e8; }
+                    </style>
+                </head>
+                <body>
+                    <h2>Suivi Recouvrement des Loyers - ${new Date().toLocaleDateString('fr-FR')}</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Logement</th>
+                                <th>Téléphone</th>
+                                <th>Montant (FCFA)</th>
+                                <th>Mois</th>
+                                <th>Date Personnelle</th>
+                                <th>Statut</th>
+                                <th>Distribution</th>
+                                <th>1ère Relance</th>
+                                <th>2ème Relance</th>
+                                <th>Mise en Demeure</th>
+                                <th>Préavis</th>
+                                <th>Date Création</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            
+            clients.forEach(client => {
+                const statusClass = 'status-' + client.statut.toLowerCase().replace(/\s+/g, '').replace('è', 'e').replace('é', 'e');
+                htmlContent += `
+                    <tr>
+                        <td>${client.nom}</td>
+                        <td>${client.logement}</td>
+                        <td>${client.telephone || '-'}</td>
+                        <td>${client.montant.toLocaleString('fr-FR')}</td>
+                        <td>${client.mois}</td>
+                        <td>${client.datePersonnalisee || '-'}</td>
+                        <td class="${statusClass}">${client.statut}</td>
+                        <td>${client.distribution ? 'Oui' : 'Non'}</td>
+                        <td>${client.relance1 ? 'Oui - ' + (client.dateRelance1 || '') : 'Non'}</td>
+                        <td>${client.relance2 ? 'Oui - ' + (client.dateRelance2 || '') : 'Non'}</td>
+                        <td>${client.miseEnDemeure ? 'Oui - ' + (client.dateMiseEnDemeure || '') : 'Non'}</td>
+                        <td>${client.preavis ? 'Oui - ' + (client.datePreavis || '') : 'Non'}</td>
+                        <td>${client.dateCreation}</td>
+                    </tr>`;
+            });
+            
+            htmlContent += `
+                        </tbody>
+                    </table>
+                    <br>
+                    <h3>Procédure de Recouvrement :</h3>
+                    <ul>
+                        <li><strong>20-25 du mois :</strong> Distribution des appels de loyer</li>
+                        <li><strong>1-5 du mois suivant :</strong> Période officielle de règlement</li>
+                        <li><strong>6-10 du mois :</strong> 1ère relance téléphonique</li>
+                        <li><strong>26-30 du mois :</strong> 2ème relance téléphonique</li>
+                        <li><strong>6-10 du mois suivant :</strong> Mise en demeure</li>
+                        <li><strong>Si pas de réaction :</strong> Préavis et résiliation</li>
+                    </ul>
+                </body>
+                </html>`;
+            
+            const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'Suivi_Recouvrement_Loyers_' + new Date().toISOString().split('T')[0] + '.xls');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Proposer aussi un export CSV propre
+            setTimeout(() => {
+                if (confirm('Voulez-vous aussi télécharger une version CSV (pour Excel) ?')) {
+                    exporterCSV();
+                }
+            }, 1000);
+        }
+        
+        function exporterCSV() {
+            // CSV avec séparateur point-virgule (standard français)
+            let csvContenu = 'Client;Logement;Téléphone;Montant;Mois;Date Personnalisée;Statut;Distribution;1ère Relance;2ème Relance;Mise en Demeure;Préavis;Date Création\n';
+            
+            clients.forEach(client => {
+                csvContenu += `${client.nom};${client.logement};${client.telephone || ''};${client.montant};${client.mois};${client.datePersonnalisee || ''};${client.statut};${client.distribution ? 'Oui' : 'Non'};${client.relance1 ? 'Oui - ' + (client.dateRelance1 || '') : 'Non'};${client.relance2 ? 'Oui - ' + (client.dateRelance2 || '') : 'Non'};${client.miseEnDemeure ? 'Oui - ' + (client.dateMiseEnDemeure || '') : 'Non'};${client.preavis ? 'Oui - ' + (client.datePreavis || '') : 'Non'};${client.dateCreation}\n`;
+            });
+            
+            // Ajouter BOM UTF-8 pour Windows
+            const bom = '\ufeff';
+            const blob = new Blob([bom + csvContenu], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'Suivi_Recouvrement_Loyers_' + new Date().toISOString().split('T')[0] + '.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Données d'exemple
+        function chargerExemples() {
+            const exemples = [
+                {
+                    id: idCounter++,
+                    nom: 'Dupont Jean',
+                    logement: 'Appartement A12',
+                    telephone: '0123456789',
+                    montant: 450000,
+                    mois: 'Juin',
+                    datePersonnalisee: '2025-06-15',
+                    statut: '1ère Relance',
+                    distribution: true,
+                    relance1: true,
+                    relance2: false,
+                    miseEnDemeure: false,
+                    preavis: false,
+                    dateCreation: '10/06/2025',
+                    dateRelance1: '08/06/2025'
+                },
+                {
+                    id: idCounter++,
+                    nom: 'Martin Sophie',
+                    logement: 'Maison Villa B5',
+                    telephone: '0987654321',
+                    montant: 650000,
+                    mois: 'Juin',
+                    datePersonnalisee: '',
+                    statut: 'En attente',
+                    distribution: true,
+                    relance1: false,
+                    relance2: false,
+                    miseEnDemeure: false,
+                    preavis: false,
+                    dateCreation: '01/06/2025'
+                }
+            ];
+            
+            clients = exemples;
+            sauvegarderDonnees();
+            afficherTableau();
+        }
+        
+        // Charger les données au démarrage
+        window.onload = function() {
+            chargerDonnees();
+            // Si aucune donnée n'est chargée, charger les exemples
+            afficherTableau();
+        };
+    </script>
+</body>
+</html>
