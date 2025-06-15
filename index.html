@@ -4,140 +4,576 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suivi Recouvrement - Accès Sécurisé</title>
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <style>
         /* Styles pour la page de connexion */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
         .login-container {
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f5f5f5;
-            font-family: Arial, sans-serif;
+            padding: 20px;
         }
+
         .login-box {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
             text-align: center;
             max-width: 400px;
-            width: 90%;
+            width: 100%;
         }
+
         .login-box h1 {
             color: #333;
             margin-bottom: 1rem;
+            font-size: 2rem;
         }
+
         .login-box p {
             color: #666;
             margin-bottom: 2rem;
+            line-height: 1.6;
         }
-        button {
-            background-color: #007bff;
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+        .login-btn {
+            background: linear-gradient(45deg, #007bff, #0056b3);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+            padding: 12px 30px;
+            border-radius: 25px;
             cursor: pointer;
             font-size: 16px;
-            margin: 5px;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+            width: 100%;
         }
-        button:hover {
-            background-color: #0056b3;
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,123,255,0.4);
         }
+
+        .login-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .logout-btn {
             position: fixed;
             top: 20px;
             right: 20px;
-            background-color: #dc3545;
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            z-index: 1000;
         }
+
         .logout-btn:hover {
-            background-color: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220,53,69,0.4);
         }
-        /* Masquer le contenu par défaut */
+
+        .config-btn {
+            background: linear-gradient(45deg, #6c757d, #495057);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .config-btn:hover {
+            transform: translateY(-1px);
+        }
+
         #protected-content {
             display: none;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
         }
+
         .user-info {
-            background-color: #e7f3ff;
-            padding: 10px;
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
             margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .welcome-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .redirect-info {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            border: 1px solid #ff9999;
+            color: #d63384;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .success-message {
+            background: #e6ffe6;
+            border: 1px solid #99ff99;
+            color: #198754;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .config-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .config-section input {
+            margin-bottom: 10px;
+        }
+
+        .toggle-link {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 14px;
+        }
+
+        .toggle-link:hover {
+            color: #0056b3;
+        }
+
+        .attempts-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .login-box {
+                padding: 1.5rem;
+                margin: 10px;
+            }
+            
+            .logout-btn {
+                top: 10px;
+                right: 10px;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Page de connexion (visible si non connecté) -->
+    <!-- Page de connexion -->
     <div id="login-page" class="login-container">
         <div class="login-box">
             <h1>🔒 Accès Sécurisé</h1>
             <p>Cette page contient des données confidentielles de la société.<br>
-            Veuillez vous connecter pour accéder au contenu.</p>
-            <button onclick="netlifyIdentity.open()">Se connecter</button>
+            Veuillez vous connecter pour accéder au système de suivi de recouvrement.</p>
+            
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            <div id="attempts-warning" class="attempts-warning" style="display: none;"></div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Nom d'utilisateur</label>
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
+                
+                <button type="submit" id="login-btn" class="login-btn">Se connecter</button>
+            </form>
+            
+            <div style="margin-top: 20px;">
+                <span class="toggle-link" onclick="toggleConfigSection()">⚙️ Configuration administrateur</span>
+            </div>
+            
+            <!-- Section de configuration (masquée par défaut) -->
+            <div id="config-section" class="config-section" style="display: none;">
+                <h3>Configuration des comptes</h3>
+                <p style="margin-bottom: 15px; font-size: 14px; color: #666;">
+                    Ajoutez ou modifiez les comptes autorisés
+                </p>
+                
+                <div class="form-group">
+                    <label for="new-username">Nouveau nom d'utilisateur</label>
+                    <input type="text" id="new-username" placeholder="Ex: admin">
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-password">Nouveau mot de passe</label>
+                    <input type="password" id="new-password" placeholder="Mot de passe sécurisé">
+                </div>
+                
+                <button type="button" onclick="addUser()" class="login-btn" style="margin-bottom: 10px;">
+                    Ajouter/Modifier le compte
+                </button>
+                
+                <div id="users-list" style="margin-top: 15px;">
+                    <strong>Comptes configurés :</strong>
+                    <div id="users-display"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Contenu protégé (visible uniquement si connecté) -->
+    <!-- Contenu protégé -->
     <div id="protected-content">
-        <button class="logout-btn" onclick="netlifyIdentity.logout()">Déconnexion</button>
+        <button class="logout-btn" onclick="logout()">Déconnexion</button>
         
         <div class="user-info">
-            <strong>Connecté en tant que:</strong> <span id="user-email"></span>
+            <strong>✅ Connecté en tant que:</strong> <span id="user-display"></span>
         </div>
 
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="refresh" content="0; url=suivi_recouvrement.html">
-            <title>Redirection...</title>
-        </head>
-        <body>
-            <p>Redirection en cours vers le suivi de recouvrement...</p>
-            <p>Si la redirection ne fonctionne pas, <a href="suivi_recouvrement.html">cliquez ici</a>.</p>
-        </body>
-        </html>
+        <div class="welcome-card">
+            <h2>🎉 Bienvenue dans le système de suivi de recouvrement</h2>
+            <p>Vous êtes maintenant connecté et avez accès aux données confidentielles.</p>
+            
+            <div class="redirect-info">
+                <h3>📋 Redirection automatique</h3>
+                <p>Vous allez être redirigé vers le tableau de bord principal dans <span id="countdown">10</span> secondes.</p>
+                <p>Si la redirection ne fonctionne pas automatiquement, 
+                <a href="suivi_recouvrement.html" style="color: #007bff; text-decoration: none;">cliquez ici</a>.</p>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button onclick="window.location.href='suivi_recouvrement.html'" 
+                        style="background: linear-gradient(45deg, #28a745, #20c997); color: white; border: none; padding: 12px 25px; border-radius: 20px; cursor: pointer; font-size: 16px;">
+                    Accéder maintenant au tableau de bord
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // Gestion de l'authentification Netlify Identity
-        if (window.netlifyIdentity) {
-            // Vérifier si l'utilisateur est connecté au chargement de la page
-            window.netlifyIdentity.on("init", user => {
-                if (user) {
-                    // Utilisateur connecté
-                    showProtectedContent(user);
-                } else {
-                    // Utilisateur non connecté
-                    showLoginPage();
-                }
-            });
+        // Configuration par défaut
+        const DEFAULT_USERS = {
+            'admin': 'admin123',
+            'recouvrement': 'recouv2024',
+            'manager': 'manager456'
+        };
 
-            // Gérer la connexion
-            window.netlifyIdentity.on("login", user => {
-                showProtectedContent(user);
-            });
+        // Variables globales
+        let loginAttempts = 0;
+        let isLocked = false;
+        let lockTimer = null;
+        let redirectTimer = null;
 
-            // Gérer la déconnexion
-            window.netlifyIdentity.on("logout", () => {
-                showLoginPage();
-            });
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            checkAuthStatus();
+        });
+
+        function initializeApp() {
+            // Initialiser les utilisateurs par défaut si pas déjà fait
+            if (!localStorage.getItem('auth_users')) {
+                localStorage.setItem('auth_users', JSON.stringify(DEFAULT_USERS));
+            }
+            
+            // Vérifier le verrouillage
+            checkLockStatus();
+            
+            // Afficher les utilisateurs dans la config
+            displayUsers();
+            
+            // Gestionnaire de formulaire
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
         }
 
-        function showProtectedContent(user) {
+        function checkAuthStatus() {
+            const currentUser = sessionStorage.getItem('authenticated_user');
+            if (currentUser) {
+                showProtectedContent(currentUser);
+            }
+        }
+
+        function checkLockStatus() {
+            const lockData = localStorage.getItem('login_lock');
+            if (lockData) {
+                const { timestamp, attempts } = JSON.parse(lockData);
+                const now = Date.now();
+                const lockDuration = 15 * 60 * 1000; // 15 minutes
+                
+                if (now - timestamp < lockDuration) {
+                    isLocked = true;
+                    loginAttempts = attempts;
+                    const remainingTime = Math.ceil((lockDuration - (now - timestamp)) / 1000 / 60);
+                    showAttemptsWarning(`Trop de tentatives échouées. Réessayez dans ${remainingTime} minutes.`);
+                    document.getElementById('login-btn').disabled = true;
+                } else {
+                    // Déverrouiller
+                    localStorage.removeItem('login_lock');
+                    isLocked = false;
+                    loginAttempts = 0;
+                }
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            
+            if (isLocked) {
+                showError('Compte verrouillé. Veuillez patienter.');
+                return;
+            }
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showError('Veuillez remplir tous les champs.');
+                return;
+            }
+
+            // Vérifier les identifiants
+            const users = JSON.parse(localStorage.getItem('auth_users') || '{}');
+            
+            if (users[username] && users[username] === password) {
+                // Connexion réussie
+                loginAttempts = 0;
+                localStorage.removeItem('login_lock');
+                sessionStorage.setItem('authenticated_user', username);
+                showSuccess('Connexion réussie !');
+                
+                setTimeout(() => {
+                    showProtectedContent(username);
+                }, 1000);
+            } else {
+                // Échec de connexion
+                loginAttempts++;
+                showError('Nom d\'utilisateur ou mot de passe incorrect.');
+                
+                if (loginAttempts >= 5) {
+                    // Verrouiller après 5 tentatives
+                    const lockData = {
+                        timestamp: Date.now(),
+                        attempts: loginAttempts
+                    };
+                    localStorage.setItem('login_lock', JSON.stringify(lockData));
+                    isLocked = true;
+                    document.getElementById('login-btn').disabled = true;
+                    showAttemptsWarning('Trop de tentatives échouées. Compte verrouillé pour 15 minutes.');
+                } else {
+                    showAttemptsWarning(`Tentative ${loginAttempts}/5. Attention !`);
+                }
+            }
+            
+            // Nettoyer le formulaire
+            document.getElementById('login-form').reset();
+        }
+
+        function showProtectedContent(username) {
             document.getElementById('login-page').style.display = 'none';
             document.getElementById('protected-content').style.display = 'block';
-            document.getElementById('user-email').textContent = user.email;
+            document.getElementById('user-display').textContent = username;
+            
+            // Démarrer le compte à rebours
+            startCountdown();
         }
 
-        function showLoginPage() {
+        function startCountdown() {
+            let seconds = 10;
+            const countdownElement = document.getElementById('countdown');
+            
+            redirectTimer = setInterval(() => {
+                seconds--;
+                countdownElement.textContent = seconds;
+                
+                if (seconds <= 0) {
+                    clearInterval(redirectTimer);
+                    window.location.href = 'suivi_recouvrement.html';
+                }
+            }, 1000);
+        }
+
+        function logout() {
+            sessionStorage.removeItem('authenticated_user');
+            if (redirectTimer) {
+                clearInterval(redirectTimer);
+            }
             document.getElementById('login-page').style.display = 'flex';
             document.getElementById('protected-content').style.display = 'none';
+            document.getElementById('login-form').reset();
+            hideMessages();
         }
 
-        // Fermer automatiquement le widget après connexion
-        window.netlifyIdentity.on("login", () => {
-            window.netlifyIdentity.close();
-        });
+        function toggleConfigSection() {
+            const section = document.getElementById('config-section');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function addUser() {
+            const username = document.getElementById('new-username').value.trim();
+            const password = document.getElementById('new-password').value;
+            
+            if (!username || !password) {
+                alert('Veuillez remplir tous les champs.');
+                return;
+            }
+
+            if (password.length < 6) {
+                alert('Le mot de passe doit contenir au moins 6 caractères.');
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('auth_users') || '{}');
+            users[username] = password;
+            localStorage.setItem('auth_users', JSON.stringify(users));
+            
+            document.getElementById('new-username').value = '';
+            document.getElementById('new-password').value = '';
+            
+            displayUsers();
+            alert('Compte ajouté/modifié avec succès !');
+        }
+
+        function displayUsers() {
+            const users = JSON.parse(localStorage.getItem('auth_users') || '{}');
+            const display = document.getElementById('users-display');
+            
+            if (Object.keys(users).length === 0) {
+                display.innerHTML = '<p style="color: #666; font-style: italic;">Aucun compte configuré</p>';
+                return;
+            }
+            
+            let html = '<ul style="margin: 10px 0; padding-left: 20px;">';
+            for (const username in users) {
+                html += `<li style="margin: 5px 0;">
+                    <strong>${username}</strong> 
+                    <button onclick="removeUser('${username}')" style="background: #dc3545; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px;">
+                        Supprimer
+                    </button>
+                </li>`;
+            }
+            html += '</ul>';
+            display.innerHTML = html;
+        }
+
+        function removeUser(username) {
+            if (confirm(`Êtes-vous sûr de vouloir supprimer le compte "${username}" ?`)) {
+                const users = JSON.parse(localStorage.getItem('auth_users') || '{}');
+                delete users[username];
+                localStorage.setItem('auth_users', JSON.stringify(users));
+                displayUsers();
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.background = '#e6ffe6';
+            errorDiv.style.border = '1px solid #99ff99';
+            errorDiv.style.color = '#198754';
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function showAttemptsWarning(message) {
+            const warningDiv = document.getElementById('attempts-warning');
+            warningDiv.textContent = message;
+            warningDiv.style.display = 'block';
+        }
+
+        function hideMessages() {
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('attempts-warning').style.display = 'none';
+        }
     </script>
 </body>
 </html>
