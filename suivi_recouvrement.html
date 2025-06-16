@@ -11,25 +11,7 @@
 <!-- Firebase App & Auth -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCURMGPDxuYJvvpDMq15dFUoiO-O4l2eV4",
-    authDomain: "suivi-recouvrement.firebaseapp.com",
-    projectId: "suivi-recouvrement",
-    storageBucket: "suivi-recouvrement.firebasestorage.app",
-    messagingSenderId: "511338352427",
-    appId: "1:511338352427:web:a6e2b72d7b2b5200c9ff6e",
-    measurementId: "G-Y58J84CVLB"
-  };
-  firebase.initializeApp(firebaseConfig);
 
-  firebase.auth().onAuthStateChanged(function(user) {
-    if (!user) {
-      alert("Vous devez vous connecter.");
-      window.location.href = "index.html";
-    }
-  });
-</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suivi de recouvrement des loyers</title>
@@ -229,6 +211,34 @@
             background: linear-gradient(135deg, #6c757d, #495057);
         }
     </style>
+<script>
+  const firebaseConfig = {
+    apiKey: "VOTRE_API_KEY",
+    authDomain: "VOTRE_PROJET.firebaseapp.com",
+    projectId: "VOTRE_PROJET",
+    storageBucket: "VOTRE_PROJET.appspot.com",
+    messagingSenderId: "XXXXXXX",
+    appId: "XXXXXXX"
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  let authChecked = false;
+
+  firebase.auth().onAuthStateChanged(function(user) {
+    authChecked = true;
+    if (!user) {
+      alert("Vous devez vous connecter.");
+      window.location.href = "index.html";
+    }
+  });
+
+  setTimeout(() => {
+    if (!authChecked) {
+      alert("Erreur de vérification d'identité. Veuillez vous reconnecter.");
+      window.location.href = "index.html";
+    }
+  }, 3000);
+</script>
 </head>
 <body>
     <div class="container">
