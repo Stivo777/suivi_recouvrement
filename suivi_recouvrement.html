@@ -413,31 +413,35 @@
         }
 
         // Sauvegarder les données dans Firestore
-        function sauvegarderDonnees() {
-            const user = firebase.auth().currentUser;
-            if (!user) return;
+        async function sauvegarderDonnees() {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) throw new Error("Utilisateur non connecté");
         
-            const batch = db.batch();
-            clients.forEach((client) => {
-                const clientData = { ...client };
-                delete clientData.id; // Supprimez l'ID pour éviter de le stocker en double
-                clientData.userId = user.uid; // Associez les données à l'utilisateur
+                const batch = db.batch();
+                clients.forEach((client) => {
+                    const ref = db.collection("clients").doc(client.id || firebase.firestore().collection("clients").doc().id);
+                    batch.set(ref, { 
+                        ...client,
+                        userId: user.uid 
+                    });
+                });
         
-                if (client.id) {
-                    const ref = db.collection("clients").doc(client.id);
-                    batch.set(ref, clientData);
-                } else {
-                    const ref = db.collection("clients").doc();
-                    batch.set(ref, clientData);
-                }
-            });
-        
-            batch.commit()
-                .then(() => console.log("Données sauvegardées avec succès"))
-                .catch((error) => console.error("Erreur de sauvegarde : ", error));
+                await batch.commit();
+                console.log("Données sauvegardées avec succès !");
+            } catch (error) {
+                console.error("Erreur Firestore :", error);
+                alert("Erreur lors de la sauvegarde : " + error.message);
+            }
         }
-
+        
         function ajouterClient() {
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                alert("Vous devez être connecté pour ajouter un client.");
+                return;
+            }
+
             const nom = document.getElementById('nomClient').value.trim();
             const logement = document.getElementById('logement').value.trim();
             const telephone = document.getElementById('telephone').value.trim();
