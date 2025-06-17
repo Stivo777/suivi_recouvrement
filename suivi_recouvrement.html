@@ -11,6 +11,7 @@
 <!-- Firebase App & Auth -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -383,13 +384,105 @@
     </div>
 
     <script>
-        let clients = [];
-        let idCounter = 1;
-        let actionHistory = [];
-        const STORAGE_KEY = 'suivi_recouvrement_data';
-
-        // Charger les données depuis le localStorage
-        function chargerDonnees() {
+        // Initialiser Firestore
+        const db = firebase.firestore();
+        
+        // Remplacer les fonctions de données existantes par celles-ci :
+        
+        // Fonction pour charger les données depuis Firestore
+        async function chargerDonnees() {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    console.error("Utilisateur non connecté");
+                    return;
+                }
+        
+                // Charger les données depuis Firestore
+                const querySnapshot = await db.collection('clients')
+                    .where('userId', '==', user.uid)
+                    .get();
+                
+                clients = [];
+                querySnapshot.forEach((doc) => {
+                    clients.push({ id: doc.id, ...doc.data() });
+                });
+        
+                // Recalculer idCounter
+                if (clients.length > 0) {
+                    const maxId = Math.max(...clients.map(c => parseInt(c.id) || 0));
+                    idCounter = maxId + 1;
+                }
+        
+                afficherTableau();
+                console.log("Données chargées depuis Firestore:", clients.length, "clients");
+            } catch (error) {
+                console.error("Erreur lors du chargement des données:", error);
+                // Fallback vers localStorage si Firestore échoue
+                chargerDonneesLocal();
+            }
+        }
+        
+        // Fonction pour sauvegarder les données dans Firestore
+        async function sauvegarderDonnees() {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    console.error("Utilisateur non connecté");
+                    return;
+                }
+        
+                // Sauvegarder aussi localement comme backup
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+                
+                // Sauvegarder dans l'historique local
+                actionHistory.push(JSON.stringify(clients));
+                if (actionHistory.length > 20) {
+                    actionHistory.shift();
+                }
+        
+                console.log("Données sauvegardées localement et dans Firestore");
+            } catch (error) {
+                console.error("Erreur lors de la sauvegarde:", error);
+                // Au moins sauvegarder localement
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+            }
+        }
+        
+        // Fonction pour sauvegarder un client spécifique
+        async function sauvegarderClient(client) {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    console.error("Utilisateur non connecté");
+                    return;
+                }
+        
+                // Ajouter l'ID utilisateur au client
+                client.userId = user.uid;
+                client.dateModification = new Date().toISOString();
+        
+                // Sauvegarder dans Firestore
+                await db.collection('clients').doc(client.id.toString()).set(client);
+                
+                console.log("Client sauvegardé:", client.nom);
+            } catch (error) {
+                console.error("Erreur lors de la sauvegarde du client:", error);
+            }
+        }
+        
+        // Fonction pour supprimer un client de Firestore
+        async function supprimerClientFirestore(id) {
+            try {
+                await db.collection('clients').doc(id.toString()).delete();
+                console.log("Client supprimé de Firestore:", id);
+            } catch (error) {
+                console.error("Erreur lors de la suppression:", error);
+            }
+        }
+        
+        // Fonction de fallback pour localStorage
+        function chargerDonneesLocal() {
             const savedData = localStorage.getItem(STORAGE_KEY);
             if (savedData) {
                 clients = JSON.parse(savedData);
@@ -399,18 +492,9 @@
                 afficherTableau();
             }
         }
-
-        // Sauvegarder les données dans le localStorage
-        function sauvegarderDonnees() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
-            // Sauvegarder aussi dans l'historique
-            actionHistory.push(JSON.stringify(clients));
-            if (actionHistory.length > 20) {
-                actionHistory.shift(); // Garder seulement les 20 dernières actions
-            }
-        }
-
-        function ajouterClient() {
+        
+        // Modifier la fonction ajouterClient
+        async function ajouterClient() {
             const nom = document.getElementById('nomClient').value.trim();
             const logement = document.getElementById('logement').value.trim();
             const telephone = document.getElementById('telephone').value.trim();
@@ -432,85 +516,47 @@
                 montant: parseFloat(montant),
                 mois: mois,
                 datePersonnalisee: datePerso,
-                commentaire: '', // NOUVEAU CHAMP
+                commentaire: commentaire,
                 statut: 'Distribution',
                 distribution: false,
                 relance1: false,
                 relance2: false,
                 miseEnDemeure: false,
                 preavis: false,
-                commentaire: commentaire,
                 dateCreation: new Date().toLocaleDateString('fr-FR')
             };
             
             clients.push(client);
-            sauvegarderDonnees();
+            await sauvegarderClient(client);
+            await sauvegarderDonnees();
             afficherTableau();
             viderFormulaire();
         }
         
-        function viderFormulaire() {
-            document.getElementById('nomClient').value = '';
-            document.getElementById('logement').value = '';
-            document.getElementById('telephone').value = '';
-            document.getElementById('montantLoyer').value = '';
-            document.getElementById('datePersonnalisee').value = '';
-            document.getElementById('moisConcerne').value = '';
-            document.getElementById('commentaire').value = ''; // NOUVEAU
+        // Modifier la fonction supprimerClient
+        async function supprimerClient(id) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
+                const clientIndex = clients.findIndex(c => c.id === id);
+                if (clientIndex !== -1) {
+                    const clientSupprime = clients[clientIndex];
+                    
+                    // Ajouter à l'historique
+                    actionHistory.push({
+                        type: 'suppression',
+                        id: id,
+                        client: JSON.parse(JSON.stringify(clientSupprime))
+                    });
+                    
+                    clients.splice(clientIndex, 1);
+                    await supprimerClientFirestore(id);
+                    await sauvegarderDonnees();
+                    afficherTableau();
+                }
+            }
         }
         
-        function filtrerTableau() {
-            const filtreStatut = document.getElementById('filtreStatut').value.toLowerCase();
-            const recherche = document.getElementById('recherche').value.toLowerCase();
-            
-            const lignes = document.querySelectorAll('#corpstableau tr');
-            lignes.forEach(ligne => {
-                const statut = ligne.querySelector('td:nth-child(7)').textContent.toLowerCase();
-                const texteLigne = ligne.textContent.toLowerCase();
-                
-                const correspondStatut = !filtreStatut || statut.includes(filtreStatut);
-                const correspondRecherche = !recherche || texteLigne.includes(recherche);
-                
-                ligne.style.display = (correspondStatut && correspondRecherche) ? '' : 'none';
-            });
-        }
-        
-        function afficherTableau() {
-            const tbody = document.getElementById('corpstableau');
-            tbody.innerHTML = '';
-            
-            clients.forEach(client => {
-                const row = document.createElement('tr');
-                // Ajouter l'attribut title pour l'info-bulle
-                row.setAttribute('title', client.commentaire || 'Aucun commentaire');
-                row.style.cursor = client.commentaire ? 'help' : 'default';
-
-                row.innerHTML = `
-                    <td><strong>${client.nom}</strong></td>
-                    <td>${client.logement}</td>
-                    <td>${client.telephone || '-'}</td>
-                    <td style="cursor: pointer;" onclick="modifierMontant(${client.id})">${client.montant.toLocaleString('fr-FR')} FCFA ✏️</td>
-                    <td style="cursor: pointer;" onclick="modifierMois(${client.id})">${client.mois} ✏️</td>
-                    <td>${client.datePersonnalisee || '-'}</td>
-                    <td><span class="status status-${client.statut.toLowerCase().replace(/\s+/g, '').replace('è', 'e').replace('é', 'e')}">${client.statut}</span></td>
-                    <td>${client.distribution ? '✅' : '⏳'}</td>
-                    <td>${client.relance1 ? '✅ ' + (client.dateRelance1 || '') : '⏳'}</td>
-                    <td>${client.relance2 ? '✅ ' + (client.dateRelance2 || '') : '⏳'}</td>
-                    <td>${client.miseEnDemeure ? '✅ ' + (client.dateMiseEnDemeure || '') : '⏳'}</td>
-                    <td>${client.preavis ? '✅ ' + (client.datePreavis || '') : '⏳'}</td>
-                    <td>
-                        <button class="action-btn" onclick="changerStatut(${client.id})" style="background: #17a2b8;">Suivant</button>
-                        <button class="action-btn" onclick="marquerPaye(${client.id})" style="background: #28a745;">Payé</button>
-                        <button class="action-btn" onclick="modifierCommentaire(${client.id})" style="background: #ffc107;">Note</button>
-                        <button class="action-btn" onclick="supprimerClient(${client.id})" style="background: #dc3545;">Suppr.</button>
-                        <button class="action-btn" onclick="annulerStatut(${client.id})" style="background: #6c757d;">Annuler</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-        
-        function changerStatut(id) {
+        // Modifier toutes les fonctions qui modifient les données
+        async function changerStatut(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
             
@@ -554,59 +600,12 @@
                 apres: JSON.parse(JSON.stringify(client))
             });
             
-            sauvegarderDonnees();
+            await sauvegarderClient(client);
+            await sauvegarderDonnees();
             afficherTableau();
         }
         
-        function annulerStatut(id) {
-            const client = clients.find(c => c.id === id);
-            if (!client) return;
-            
-            // Trouver la dernière action pour ce client
-            for (let i = actionHistory.length - 1; i >= 0; i--) {
-                const action = actionHistory[i];
-                if (action.id === id) {
-                    // Restaurer l'état précédent
-                    Object.assign(client, action.avant);
-                    // Supprimer cette action de l'historique
-                    actionHistory.splice(i, 1);
-                    sauvegarderDonnees();
-                    afficherTableau();
-                    return;
-                }
-            }
-            
-            alert("Aucune action précédente trouvée pour ce client.");
-        }
-        
-        function annulerDerniereAction() {
-            if (actionHistory.length === 0) {
-                alert("Aucune action à annuler.");
-                return;
-            }
-            
-            const derniereAction = actionHistory.pop();
-            
-            if (derniereAction.type === 'ajout') {
-                // Supprimer le client ajouté
-                clients = clients.filter(c => c.id !== derniereAction.id);
-            } else if (derniereAction.type === 'suppression') {
-                // Restaurer le client supprimé
-                clients.push(derniereAction.client);
-            } else if (derniereAction.type === 'modification') {
-                // Restaurer l'état précédent
-                const client = clients.find(c => c.id === derniereAction.id);
-                if (client) {
-                    Object.assign(client, derniereAction.avant);
-                }
-            }
-            
-            sauvegarderDonnees();
-            afficherTableau();
-            alert("Dernière action annulée.");
-        }
-        
-        function marquerPaye(id) {
+        async function marquerPaye(id) {
             const client = clients.find(c => c.id === id);
             if (client) {
                 // Sauvegarder l'état avant modification
@@ -623,44 +622,26 @@
                     apres: JSON.parse(JSON.stringify(client))
                 });
                 
-                sauvegarderDonnees();
+                await sauvegarderClient(client);
+                await sauvegarderDonnees();
                 afficherTableau();
             }
         }
         
-        function supprimerClient(id) {
-            if (confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
-                const clientIndex = clients.findIndex(c => c.id === id);
-                if (clientIndex !== -1) {
-                    const clientSupprime = clients[clientIndex];
-                    
-                    // Ajouter à l'historique
-                    actionHistory.push({
-                        type: 'suppression',
-                        id: id,
-                        client: JSON.parse(JSON.stringify(clientSupprime))
-                    });
-                    
-                    clients.splice(clientIndex, 1);
-                    sauvegarderDonnees();
-                    afficherTableau();
-                }
-            }
-        }
-
-        function modifierMontant(id) {
+        async function modifierMontant(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
             
             const nouveauMontant = prompt(`Modifier le montant pour ${client.nom}:`, client.montant);
             if (nouveauMontant !== null && !isNaN(nouveauMontant) && nouveauMontant > 0) {
                 client.montant = parseFloat(nouveauMontant);
-                sauvegarderDonnees();
+                await sauvegarderClient(client);
+                await sauvegarderDonnees();
                 afficherTableau();
             }
         }
-
-        function modifierMois(id) {
+        
+        async function modifierMois(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
             
@@ -675,20 +656,22 @@
                 const index = parseInt(choix) - 1;
                 if (index >= 0 && index < 12) {
                     client.mois = moisOptions[index];
-                    sauvegarderDonnees();
+                    await sauvegarderClient(client);
+                    await sauvegarderDonnees();
                     afficherTableau();
                 }
             }
         }
-
-        function modifierCommentaire(id) {
+        
+        async function modifierCommentaire(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
             
             const nouveauCommentaire = prompt(`Commentaire pour ${client.nom}:`, client.commentaire || '');
             if (nouveauCommentaire !== null) {
                 client.commentaire = nouveauCommentaire;
-                sauvegarderDonnees();
+                await sauvegarderClient(client);
+                await sauvegarderDonnees();
                 afficherTableau();
             }
         }
@@ -868,9 +851,17 @@
         
         // Charger les données au démarrage
         window.onload = function() {
-            chargerDonnees();
-            // Si aucune donnée n'est chargée, charger les exemples
-            afficherTableau();
+            // Attendre que l'authentification soit vérifiée
+            firebase.auth().onAuthStateChanged(function(user) {
+                if (user) {
+                    // Utilisateur connecté, charger les données
+                    chargerDonnees();
+                } else {
+                    // Utilisateur non connecté, rediriger
+                    alert('Vous devez vous connecter.');
+                    window.location.href = 'index.html';
+                }
+            });
         };
     </script>
 </body>
