@@ -11,6 +11,7 @@
 <!-- Firebase App & Auth -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,6 +223,7 @@
     measurementId: "G-Y58J84CVLB"
   };
   firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
   let authChecked = false;
 
@@ -388,26 +390,51 @@
         let actionHistory = [];
         const STORAGE_KEY = 'suivi_recouvrement_data';
 
-        // Charger les données depuis le localStorage
+        // Charger les données depuis Firestore
         function chargerDonnees() {
-            const savedData = localStorage.getItem(STORAGE_KEY);
-            if (savedData) {
-                clients = JSON.parse(savedData);
-                if (clients.length > 0) {
-                    idCounter = Math.max(...clients.map(c => c.id)) + 1;
-                }
-                afficherTableau();
-            }
+            const user = firebase.auth().currentUser;
+            if (!user) return;
+        
+            db.collection("clients").where("userId", "==", user.uid)
+                .get()
+                .then((querySnapshot) => {
+                    clients = [];
+                    querySnapshot.forEach((doc) => {
+                        clients.push({ id: doc.id, ...doc.data() });
+                    });
+                    if (clients.length > 0) {
+                        idCounter = Math.max(...clients.map(c => c.id)) + 1;
+                    }
+                    afficherTableau();
+                })
+                .catch((error) => {
+                    console.error("Erreur de chargement : ", error);
+                });
         }
 
-        // Sauvegarder les données dans le localStorage
+        // Sauvegarder les données dans Firestore
         function sauvegarderDonnees() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
-            // Sauvegarder aussi dans l'historique
-            actionHistory.push(JSON.stringify(clients));
-            if (actionHistory.length > 20) {
-                actionHistory.shift(); // Garder seulement les 20 dernières actions
-            }
+            const user = firebase.auth().currentUser;
+            if (!user) return;
+        
+            const batch = db.batch();
+            clients.forEach((client) => {
+                const clientData = { ...client };
+                delete clientData.id; // Supprimez l'ID pour éviter de le stocker en double
+                clientData.userId = user.uid; // Associez les données à l'utilisateur
+        
+                if (client.id) {
+                    const ref = db.collection("clients").doc(client.id);
+                    batch.set(ref, clientData);
+                } else {
+                    const ref = db.collection("clients").doc();
+                    batch.set(ref, clientData);
+                }
+            });
+        
+            batch.commit()
+                .then(() => console.log("Données sauvegardées avec succès"))
+                .catch((error) => console.error("Erreur de sauvegarde : ", error));
         }
 
         function ajouterClient() {
