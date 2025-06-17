@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Suivi Recouvrement - Accès Sécurisé</title>
+  <link rel="icon" href="sg_immo_logo.ico" type="image/x-icon">
 
-  <!-- ✅ Firebase App & Auth -->
+  <!-- Firebase App & Auth -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script>
@@ -21,9 +22,152 @@
     firebase.initializeApp(firebaseConfig);
   </script>
 
-  <!-- 🎨 Vos styles personnalisés ici -->
   <style>
-    /* ... styles existants conservés ... */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+    }
+
+    .login-box {
+      background: white;
+      border-radius: 15px;
+      padding: 40px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .login-box h1 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+      font-size: 28px;
+      font-weight: 300;
+    }
+
+    .login-box p {
+      color: #6c757d;
+      margin-bottom: 30px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #495057;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      background: white;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .error-message {
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      border: 1px solid #ffcdd2;
+      font-size: 14px;
+    }
+
+    .info-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e9ecef;
+    }
+
+    .info-section h3 {
+      color: #495057;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+
+    .info-section p {
+      color: #6c757d;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .credentials-box {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+      margin-top: 15px;
+    }
+
+    .credentials-box strong {
+      color: #495057;
+    }
+
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 10px;
+      }
+      
+      .login-box {
+        padding: 30px 20px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -31,47 +175,123 @@
   <div id="login-page" class="login-container">
     <div class="login-box">
       <h1>🔒 Accès Sécurisé</h1>
-      <p>Veuillez vous connecter pour accéder au système de suivi de recouvrement.</p>
+      <p>Veuillez vous connecter pour accéder au système de suivi de recouvrement des loyers.</p>
 
       <div id="error-message" class="error-message" style="display: none;"></div>
 
       <form id="login-form">
         <div class="form-group">
-          <label for="username">Email</label>
-          <input type="email" id="username" name="username" required />
+          <label for="username">📧 Email</label>
+          <input type="email" id="username" name="username" required placeholder="votre@email.com" />
         </div>
 
         <div class="form-group">
-          <label for="password">Mot de passe</label>
-          <input type="password" id="password" name="password" required />
+          <label for="password">🔑 Mot de passe</label>
+          <input type="password" id="password" name="password" required placeholder="Votre mot de passe" />
         </div>
 
         <button type="submit" id="login-btn" class="login-btn">Se connecter</button>
       </form>
+
+      <!-- Section d'informations -->
+      <div class="info-section">
+        <h3>ℹ️ Première connexion ?</h3>
+        <p>Contactez votre administrateur pour obtenir vos identifiants de connexion.</p>
+        
+        <div class="credentials-box">
+          <p><strong>📝 Compte de démonstration :</strong></p>
+          <p>Email : demo@example.com</p>
+          <p>Mot de passe : demo123</p>
+          <p style="font-size: 11px; color: #6c757d; margin-top: 10px;">
+            ⚠️ Ce compte sera créé automatiquement si vous l'utilisez pour la première fois.
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Script Firebase de connexion -->
   <script>
+    // Vérifier si l'utilisateur est déjà connecté
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        // L'utilisateur est déjà connecté, rediriger vers l'application
+        sessionStorage.setItem("authenticated_user", user.email);
+        window.location.href = "suivi_recouvrement.html";
+      }
+    });
+
     document.getElementById("login-form").addEventListener("submit", function (e) {
       e.preventDefault();
       const email = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value;
+      const loginBtn = document.getElementById("login-btn");
+      const errorDiv = document.getElementById("error-message");
+
+      // Désactiver le bouton pendant la connexion
+      loginBtn.textContent = "Connexion en cours...";
+      loginBtn.disabled = true;
+      errorDiv.style.display = "none";
 
       firebase.auth().signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
           // Connexion réussie
           sessionStorage.setItem("authenticated_user", userCredential.user.email);
-          document.getElementById("error-message").style.display = "none";
-          alert("Connexion réussie !");
+          loginBtn.textContent = "✅ Connexion réussie !";
           setTimeout(() => {
             window.location.href = "suivi_recouvrement.html";
           }, 1000);
         })
         .catch((error) => {
-          document.getElementById("error-message").textContent = error.message;
-          document.getElementById("error-message").style.display = "block";
+          console.log("Erreur de connexion:", error.code);
+          
+          // Si l'utilisateur n'existe pas, essayer de le créer (pour les comptes de démo)
+          if (error.code === 'auth/user-not-found') {
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+              .then((userCredential) => {
+                sessionStorage.setItem("authenticated_user", userCredential.user.email);
+                loginBtn.textContent = "✅ Compte créé et connecté !";
+                setTimeout(() => {
+                  window.location.href = "suivi_recouvrement.html";
+                }, 1000);
+              })
+              .catch((createError) => {
+                errorDiv.textContent = "Erreur lors de la création du compte : " + getErrorMessage(createError.code);
+                errorDiv.style.display = "block";
+                resetLoginButton();
+              });
+          } else {
+            errorDiv.textContent = getErrorMessage(error.code);
+            errorDiv.style.display = "block";
+            resetLoginButton();
+          }
         });
+
+      function resetLoginButton() {
+        loginBtn.textContent = "Se connecter";
+        loginBtn.disabled = false;
+      }
+
+      function getErrorMessage(errorCode) {
+        switch(errorCode) {
+          case 'auth/invalid-email':
+            return 'Adresse email invalide.';
+          case 'auth/user-disabled':
+            return 'Ce compte a été désactivé.';
+          case 'auth/user-not-found':
+            return 'Aucun compte trouvé avec cette adresse email.';
+          case 'auth/wrong-password':
+            return 'Mot de passe incorrect.';
+          case 'auth/too-many-requests':
+            return 'Trop de tentatives. Veuillez réessayer plus tard.';
+          case 'auth/weak-password':
+            return 'Le mot de passe doit contenir au moins 6 caractères.';
+          case 'auth/email-already-in-use':
+            return 'Cette adresse email est déjà utilisée.';
+          default:
+            return 'Erreur de connexion : ' + errorCode;
+        }
+      }
     });
   </script>
 </body>
