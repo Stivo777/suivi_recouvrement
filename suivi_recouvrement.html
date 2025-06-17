@@ -11,7 +11,6 @@
 <!-- Firebase App & Auth -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -223,7 +222,6 @@
     measurementId: "G-Y58J84CVLB"
   };
   firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
 
   let authChecked = false;
 
@@ -390,58 +388,29 @@
         let actionHistory = [];
         const STORAGE_KEY = 'suivi_recouvrement_data';
 
-        // Charger les données depuis Firestore
+        // Charger les données depuis le localStorage
         function chargerDonnees() {
-            const user = firebase.auth().currentUser;
-            if (!user) return;
-        
-            db.collection("clients").where("userId", "==", user.uid)
-                .get()
-                .then((querySnapshot) => {
-                    clients = [];
-                    querySnapshot.forEach((doc) => {
-                        clients.push({ id: doc.id, ...doc.data() });
-                    });
-                    if (clients.length > 0) {
-                        idCounter = Math.max(...clients.map(c => c.id)) + 1;
-                    }
-                    afficherTableau();
-                })
-                .catch((error) => {
-                    console.error("Erreur de chargement : ", error);
-                });
-        }
-
-        // Sauvegarder les données dans Firestore
-        async function sauvegarderDonnees() {
-            try {
-                const user = firebase.auth().currentUser;
-                if (!user) throw new Error("Utilisateur non connecté");
-        
-                const batch = db.batch();
-                clients.forEach((client) => {
-                    const ref = db.collection("clients").doc(client.id || firebase.firestore().collection("clients").doc().id);
-                    batch.set(ref, { 
-                        ...client,
-                        userId: user.uid 
-                    });
-                });
-        
-                await batch.commit();
-                console.log("Données sauvegardées avec succès !");
-            } catch (error) {
-                console.error("Erreur Firestore :", error);
-                alert("Erreur lors de la sauvegarde : " + error.message);
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            if (savedData) {
+                clients = JSON.parse(savedData);
+                if (clients.length > 0) {
+                    idCounter = Math.max(...clients.map(c => c.id)) + 1;
+                }
+                afficherTableau();
             }
         }
-        
+
+        // Sauvegarder les données dans le localStorage
+        function sauvegarderDonnees() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+            // Sauvegarder aussi dans l'historique
+            actionHistory.push(JSON.stringify(clients));
+            if (actionHistory.length > 20) {
+                actionHistory.shift(); // Garder seulement les 20 dernières actions
+            }
+        }
+
         function ajouterClient() {
-            const user = firebase.auth().currentUser;
-            if (!user) {
-                alert("Vous devez être connecté pour ajouter un client.");
-                return;
-            }
-
             const nom = document.getElementById('nomClient').value.trim();
             const logement = document.getElementById('logement').value.trim();
             const telephone = document.getElementById('telephone').value.trim();
