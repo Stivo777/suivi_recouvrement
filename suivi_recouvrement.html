@@ -9,9 +9,11 @@
 <html lang="fr">
 <head>
 <!-- Firebase App & Auth -->
+<!-- Remplacer les scripts Firebase existants par : -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suivi de recouvrement des loyers</title>
@@ -383,34 +385,48 @@
     </div>
 
     <script>
+        // REMPLACER la section de gestion des données
         let clients = [];
         let idCounter = 1;
         let actionHistory = [];
-        const STORAGE_KEY = 'suivi_recouvrement_data';
+        const db = firebase.firestore(); // NOUVEAU
 
-        // Charger les données depuis le localStorage
-        function chargerDonnees() {
-            const savedData = localStorage.getItem(STORAGE_KEY);
-            if (savedData) {
-                clients = JSON.parse(savedData);
+        // REMPLACER la fonction chargerDonnees
+        async function chargerDonnees() {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) return;
+                
+                const snapshot = await db.collection('clients').orderBy('dateCreation', 'desc').get();
+                clients = [];
+                
+                snapshot.forEach(doc => {
+                    clients.push({ id: doc.id, ...doc.data() });
+                });
+                
                 if (clients.length > 0) {
-                    idCounter = Math.max(...clients.map(c => c.id)) + 1;
+                    // Trouver le plus grand ID numérique
+                    const numericIds = clients.map(c => parseInt(c.id)).filter(id => !isNaN(id));
+                    if (numericIds.length > 0) {
+                        idCounter = Math.max(...numericIds) + 1;
+                    }
                 }
+                
                 afficherTableau();
+            } catch (error) {
+                console.error("Erreur lors du chargement des données:", error);
+                alert("Erreur lors du chargement des données.");
             }
         }
 
-        // Sauvegarder les données dans le localStorage
-        function sauvegarderDonnees() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
-            // Sauvegarder aussi dans l'historique
-            actionHistory.push(JSON.stringify(clients));
-            if (actionHistory.length > 20) {
-                actionHistory.shift(); // Garder seulement les 20 dernières actions
-            }
+        // REMPLACER la fonction sauvegarderDonnees
+        async function sauvegarderDonnees() {
+            // Cette fonction n'est plus nécessaire car on sauvegarde directement
+            // Garder pour compatibilité mais vide
         }
 
-        function ajouterClient() {
+        // REMPLACER la fonction ajouterClient
+        async function ajouterClient() {
             const nom = document.getElementById('nomClient').value.trim();
             const logement = document.getElementById('logement').value.trim();
             const telephone = document.getElementById('telephone').value.trim();
@@ -425,28 +441,32 @@
             }
             
             const client = {
-                id: idCounter++,
                 nom: nom,
                 logement: logement,
                 telephone: telephone,
                 montant: parseFloat(montant),
                 mois: mois,
                 datePersonnalisee: datePerso,
-                commentaire: '', // NOUVEAU CHAMP
+                commentaire: commentaire,
                 statut: 'Distribution',
                 distribution: false,
                 relance1: false,
                 relance2: false,
                 miseEnDemeure: false,
                 preavis: false,
-                commentaire: commentaire,
-                dateCreation: new Date().toLocaleDateString('fr-FR')
+                dateCreation: new Date().toISOString(),
+                userId: firebase.auth().currentUser.uid // NOUVEAU : associer à l'utilisateur
             };
             
-            clients.push(client);
-            sauvegarderDonnees();
-            afficherTableau();
-            viderFormulaire();
+            try {
+                const docRef = await db.collection('clients').add(client);
+                console.log("Client ajouté avec ID: ", docRef.id);
+                await chargerDonnees(); // Recharger les données
+                viderFormulaire();
+            } catch (error) {
+                console.error("Erreur lors de l'ajout:", error);
+                alert("Erreur lors de l'ajout du client.");
+            }
         }
         
         function viderFormulaire() {
@@ -482,7 +502,7 @@
             clients.forEach(client => {
                 const row = document.createElement('tr');
                 // Ajouter l'attribut title pour l'info-bulle
-                row.setAttribute('title', client.commentaire || 'Aucun commentaire');
+                row.setAttribute('title', (client.commentaire || 'Aucun commentaire') + ' - Créé le: ' + new Date(client.dateCreation).toLocaleDateString('fr-FR'));
                 row.style.cursor = client.commentaire ? 'help' : 'default';
 
                 row.innerHTML = `
@@ -510,54 +530,50 @@
             });
         }
         
-        function changerStatut(id) {
-            const client = clients.find(c => c.id === id);
-            if (!client) return;
-            
-            // Sauvegarder l'état avant modification
-            const avantModification = JSON.parse(JSON.stringify(client));
-            
-            const aujourdhui = new Date().toLocaleDateString('fr-FR');
-            
-            switch(client.statut) {
-                case 'Distribution':
-                    client.statut = 'En attente';
-                    client.distribution = true;
-                    break;
-                case 'En attente':
-                    client.statut = '1ère Relance';
-                    client.relance1 = true;
-                    client.dateRelance1 = aujourdhui;
-                    break;
-                case '1ère Relance':
-                    client.statut = '2ème Relance';
-                    client.relance2 = true;
-                    client.dateRelance2 = aujourdhui;
-                    break;
-                case '2ème Relance':
-                    client.statut = 'Mise en Demeure';
-                    client.miseEnDemeure = true;
-                    client.dateMiseEnDemeure = aujourdhui;
-                    break;
-                case 'Mise en Demeure':
-                    client.statut = 'Préavis';
-                    client.preavis = true;
-                    client.datePreavis = aujourdhui;
-                    break;
+        // REMPLACER les fonctions de modification
+        async function changerStatut(id) {
+            try {
+                const client = clients.find(c => c.id === id);
+                if (!client) return;
+                
+                const aujourdhui = new Date().toISOString();
+                const updates = {};
+                
+                switch(client.statut) {
+                    case 'Distribution':
+                        updates.statut = 'En attente';
+                        updates.distribution = true;
+                        break;
+                    case 'En attente':
+                        updates.statut = '1ère Relance';
+                        updates.relance1 = true;
+                        updates.dateRelance1 = aujourdhui;
+                        break;
+                    case '1ère Relance':
+                        updates.statut = '2ème Relance';
+                        updates.relance2 = true;
+                        updates.dateRelance2 = aujourdhui;
+                        break;
+                    case '2ème Relance':
+                        updates.statut = 'Mise en Demeure';
+                        updates.miseEnDemeure = true;
+                        updates.dateMiseEnDemeure = aujourdhui;
+                        break;
+                    case 'Mise en Demeure':
+                        updates.statut = 'Préavis';
+                        updates.preavis = true;
+                        updates.datePreavis = aujourdhui;
+                        break;
+                }
+                
+                await db.collection('clients').doc(id).update(updates);
+                await chargerDonnees();
+            } catch (error) {
+                console.error("Erreur lors du changement de statut:", error);
+                alert("Erreur lors de la mise à jour.");
             }
-            
-            // Ajouter à l'historique
-            actionHistory.push({
-                type: 'changerStatut',
-                id: id,
-                avant: avantModification,
-                apres: JSON.parse(JSON.stringify(client))
-            });
-            
-            sauvegarderDonnees();
-            afficherTableau();
         }
-        
+
         function annulerStatut(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
@@ -606,61 +622,50 @@
             alert("Dernière action annulée.");
         }
         
-        function marquerPaye(id) {
-            const client = clients.find(c => c.id === id);
-            if (client) {
-                // Sauvegarder l'état avant modification
-                const avantModification = JSON.parse(JSON.stringify(client));
-                
-                client.statut = 'Payé';
-                client.datePaiement = new Date().toLocaleDateString('fr-FR');
-                
-                // Ajouter à l'historique
-                actionHistory.push({
-                    type: 'marquerPaye',
-                    id: id,
-                    avant: avantModification,
-                    apres: JSON.parse(JSON.stringify(client))
+        async function marquerPaye(id) {
+            try {
+                await db.collection('clients').doc(id).update({
+                    statut: 'Payé',
+                    datePaiement: new Date().toISOString()
                 });
-                
-                sauvegarderDonnees();
-                afficherTableau();
+                await chargerDonnees();
+            } catch (error) {
+                console.error("Erreur:", error);
+                alert("Erreur lors de la mise à jour.");
             }
         }
         
-        function supprimerClient(id) {
+        async function supprimerClient(id) {
             if (confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
-                const clientIndex = clients.findIndex(c => c.id === id);
-                if (clientIndex !== -1) {
-                    const clientSupprime = clients[clientIndex];
-                    
-                    // Ajouter à l'historique
-                    actionHistory.push({
-                        type: 'suppression',
-                        id: id,
-                        client: JSON.parse(JSON.stringify(clientSupprime))
-                    });
-                    
-                    clients.splice(clientIndex, 1);
-                    sauvegarderDonnees();
-                    afficherTableau();
+                try {
+                    await db.collection('clients').doc(id).delete();
+                    await chargerDonnees();
+                } catch (error) {
+                    console.error("Erreur lors de la suppression:", error);
+                    alert("Erreur lors de la suppression.");
                 }
             }
         }
 
-        function modifierMontant(id) {
+        async function modifierMontant(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
             
             const nouveauMontant = prompt(`Modifier le montant pour ${client.nom}:`, client.montant);
             if (nouveauMontant !== null && !isNaN(nouveauMontant) && nouveauMontant > 0) {
-                client.montant = parseFloat(nouveauMontant);
-                sauvegarderDonnees();
-                afficherTableau();
+                try {
+                    await db.collection('clients').doc(id).update({
+                        montant: parseFloat(nouveauMontant)
+                    });
+                    await chargerDonnees();
+                } catch (error) {
+                    console.error("Erreur:", error);
+                    alert("Erreur lors de la mise à jour.");
+                }
             }
         }
 
-        function modifierMois(id) {
+        async function modifierMois(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
             
@@ -674,22 +679,34 @@
             if (choix !== null) {
                 const index = parseInt(choix) - 1;
                 if (index >= 0 && index < 12) {
-                    client.mois = moisOptions[index];
-                    sauvegarderDonnees();
-                    afficherTableau();
+                    try {
+                        await db.collection('clients').doc(id).update({
+                            mois: moisOptions[index]
+                        });
+                        await chargerDonnees();
+                    } catch (error) {
+                        console.error("Erreur:", error);
+                        alert("Erreur lors de la mise à jour.");
+                    }
                 }
             }
         }
 
-        function modifierCommentaire(id) {
+        async function modifierCommentaire(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
             
             const nouveauCommentaire = prompt(`Commentaire pour ${client.nom}:`, client.commentaire || '');
             if (nouveauCommentaire !== null) {
-                client.commentaire = nouveauCommentaire;
-                sauvegarderDonnees();
-                afficherTableau();
+                try {
+                    await db.collection('clients').doc(id).update({
+                        commentaire: nouveauCommentaire
+                    });
+                    await chargerDonnees();
+                } catch (error) {
+                    console.error("Erreur:", error);
+                    alert("Erreur lors de la mise à jour.");
+                }
             }
         }
         
@@ -866,11 +883,13 @@
             afficherTableau();
         }
         
-        // Charger les données au démarrage
+        // MODIFIER la fonction window.onload
         window.onload = function() {
-            chargerDonnees();
-            // Si aucune donnée n'est chargée, charger les exemples
-            afficherTableau();
+            firebase.auth().onAuthStateChanged(function(user) {
+                if (user) {
+                    chargerDonnees();
+                }
+            });
         };
     </script>
 </body>
