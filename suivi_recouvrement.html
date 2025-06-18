@@ -9,7 +9,6 @@
 <html lang="fr">
 <head>
 <!-- Firebase App & Auth -->
-<!-- Remplacer les scripts Firebase existants par : -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -291,12 +290,10 @@
                     <option value="Novembre">Novembre</option>
                     <option value="Décembre">Décembre</option>
                 </select>
-            
+            </div>
             <div class="control-group">
                 <label>Commentaire:</label>
                 <input type="text" id="commentaire" placeholder="Note ou commentaire...">
-            </div>
-
             </div>
             <button onclick="ajouterClient()">➕ Ajouter Client</button>
             <button onclick="viderFormulaire()">🗑️ Vider</button>
@@ -385,13 +382,11 @@
     </div>
 
     <script>
-        // REMPLACER la section de gestion des données
         let clients = [];
-        let idCounter = 1;
         let actionHistory = [];
-        const db = firebase.firestore(); // NOUVEAU
+        const db = firebase.firestore();
 
-        // REMPLACER la fonction chargerDonnees
+        // Fonction pour charger les données depuis Firestore
         async function chargerDonnees() {
             try {
                 const user = firebase.auth().currentUser;
@@ -404,14 +399,6 @@
                     clients.push({ id: doc.id, ...doc.data() });
                 });
                 
-                if (clients.length > 0) {
-                    // Trouver le plus grand ID numérique
-                    const numericIds = clients.map(c => parseInt(c.id)).filter(id => !isNaN(id));
-                    if (numericIds.length > 0) {
-                        idCounter = Math.max(...numericIds) + 1;
-                    }
-                }
-                
                 afficherTableau();
             } catch (error) {
                 console.error("Erreur lors du chargement des données:", error);
@@ -419,13 +406,7 @@
             }
         }
 
-        // REMPLACER la fonction sauvegarderDonnees
-        async function sauvegarderDonnees() {
-            // Cette fonction n'est plus nécessaire car on sauvegarde directement
-            // Garder pour compatibilité mais vide
-        }
-
-        // REMPLACER la fonction ajouterClient
+        // Fonction pour ajouter un client
         async function ajouterClient() {
             const nom = document.getElementById('nomClient').value.trim();
             const logement = document.getElementById('logement').value.trim();
@@ -455,13 +436,13 @@
                 miseEnDemeure: false,
                 preavis: false,
                 dateCreation: new Date().toISOString(),
-                userId: firebase.auth().currentUser.uid // NOUVEAU : associer à l'utilisateur
+                userId: firebase.auth().currentUser.uid
             };
             
             try {
                 const docRef = await db.collection('clients').add(client);
                 console.log("Client ajouté avec ID: ", docRef.id);
-                await chargerDonnees(); // Recharger les données
+                await chargerDonnees();
                 viderFormulaire();
             } catch (error) {
                 console.error("Erreur lors de l'ajout:", error);
@@ -476,7 +457,7 @@
             document.getElementById('montantLoyer').value = '';
             document.getElementById('datePersonnalisee').value = '';
             document.getElementById('moisConcerne').value = '';
-            document.getElementById('commentaire').value = ''; // NOUVEAU
+            document.getElementById('commentaire').value = '';
         }
         
         function filtrerTableau() {
@@ -501,7 +482,6 @@
             
             clients.forEach(client => {
                 const row = document.createElement('tr');
-                // Ajouter l'attribut title pour l'info-bulle
                 row.setAttribute('title', (client.commentaire || 'Aucun commentaire') + ' - Créé le: ' + new Date(client.dateCreation).toLocaleDateString('fr-FR'));
                 row.style.cursor = client.commentaire ? 'help' : 'default';
 
@@ -509,28 +489,28 @@
                     <td><strong>${client.nom}</strong></td>
                     <td>${client.logement}</td>
                     <td>${client.telephone || '-'}</td>
-                    <td style="cursor: pointer;" onclick="modifierMontant(${client.id})">${client.montant.toLocaleString('fr-FR')} FCFA ✏️</td>
-                    <td style="cursor: pointer;" onclick="modifierMois(${client.id})">${client.mois} ✏️</td>
+                    <td style="cursor: pointer;" onclick="modifierMontant('${client.id}')">${client.montant.toLocaleString('fr-FR')} FCFA ✏️</td>
+                    <td style="cursor: pointer;" onclick="modifierMois('${client.id}')">${client.mois} ✏️</td>
                     <td>${client.datePersonnalisee || '-'}</td>
                     <td><span class="status status-${client.statut.toLowerCase().replace(/\s+/g, '').replace('è', 'e').replace('é', 'e')}">${client.statut}</span></td>
                     <td>${client.distribution ? '✅' : '⏳'}</td>
-                    <td>${client.relance1 ? '✅ ' + (client.dateRelance1 || '') : '⏳'}</td>
-                    <td>${client.relance2 ? '✅ ' + (client.dateRelance2 || '') : '⏳'}</td>
-                    <td>${client.miseEnDemeure ? '✅ ' + (client.dateMiseEnDemeure || '') : '⏳'}</td>
-                    <td>${client.preavis ? '✅ ' + (client.datePreavis || '') : '⏳'}</td>
+                    <td>${client.relance1 ? '✅ ' + (client.dateRelance1 ? new Date(client.dateRelance1).toLocaleDateString('fr-FR') : '') : '⏳'}</td>
+                    <td>${client.relance2 ? '✅ ' + (client.dateRelance2 ? new Date(client.dateRelance2).toLocaleDateString('fr-FR') : '') : '⏳'}</td>
+                    <td>${client.miseEnDemeure ? '✅ ' + (client.dateMiseEnDemeure ? new Date(client.dateMiseEnDemeure).toLocaleDateString('fr-FR') : '') : '⏳'}</td>
+                    <td>${client.preavis ? '✅ ' + (client.datePreavis ? new Date(client.datePreavis).toLocaleDateString('fr-FR') : '') : '⏳'}</td>
                     <td>
-                        <button class="action-btn" onclick="changerStatut(${client.id})" style="background: #17a2b8;">Suivant</button>
-                        <button class="action-btn" onclick="marquerPaye(${client.id})" style="background: #28a745;">Payé</button>
-                        <button class="action-btn" onclick="modifierCommentaire(${client.id})" style="background: #ffc107;">Note</button>
-                        <button class="action-btn" onclick="supprimerClient(${client.id})" style="background: #dc3545;">Suppr.</button>
-                        <button class="action-btn" onclick="annulerStatut(${client.id})" style="background: #6c757d;">Annuler</button>
+                        <button class="action-btn" onclick="changerStatut('${client.id}')" style="background: #17a2b8;">Suivant</button>
+                        <button class="action-btn" onclick="marquerPaye('${client.id}')" style="background: #28a745;">Payé</button>
+                        <button class="action-btn" onclick="modifierCommentaire('${client.id}')" style="background: #ffc107;">Note</button>
+                        <button class="action-btn" onclick="supprimerClient('${client.id}')" style="background: #dc3545;">Suppr.</button>
+                        <button class="action-btn" onclick="annulerStatut('${client.id}')" style="background: #6c757d;">Annuler</button>
                     </td>
                 `;
                 tbody.appendChild(row);
             });
         }
         
-        // REMPLACER les fonctions de modification
+        // Fonction pour changer le statut d'un client
         async function changerStatut(id) {
             try {
                 const client = clients.find(c => c.id === id);
@@ -574,54 +554,57 @@
             }
         }
 
-        function annulerStatut(id) {
-            const client = clients.find(c => c.id === id);
-            if (!client) return;
-            
-            // Trouver la dernière action pour ce client
-            for (let i = actionHistory.length - 1; i >= 0; i--) {
-                const action = actionHistory[i];
-                if (action.id === id) {
-                    // Restaurer l'état précédent
-                    Object.assign(client, action.avant);
-                    // Supprimer cette action de l'historique
-                    actionHistory.splice(i, 1);
-                    sauvegarderDonnees();
-                    afficherTableau();
-                    return;
+        // Fonction pour annuler le statut (fonction simplifiée)
+        async function annulerStatut(id) {
+            try {
+                const client = clients.find(c => c.id === id);
+                if (!client) return;
+                
+                const updates = {};
+                
+                switch(client.statut) {
+                    case 'En attente':
+                        updates.statut = 'Distribution';
+                        updates.distribution = false;
+                        break;
+                    case '1ère Relance':
+                        updates.statut = 'En attente';
+                        updates.relance1 = false;
+                        updates.dateRelance1 = firebase.firestore.FieldValue.delete();
+                        break;
+                    case '2ème Relance':
+                        updates.statut = '1ère Relance';
+                        updates.relance2 = false;
+                        updates.dateRelance2 = firebase.firestore.FieldValue.delete();
+                        break;
+                    case 'Mise en Demeure':
+                        updates.statut = '2ème Relance';
+                        updates.miseEnDemeure = false;
+                        updates.dateMiseEnDemeure = firebase.firestore.FieldValue.delete();
+                        break;
+                    case 'Préavis':
+                        updates.statut = 'Mise en Demeure';
+                        updates.preavis = false;
+                        updates.datePreavis = firebase.firestore.FieldValue.delete();
+                        break;
+                    case 'Payé':
+                        updates.statut = 'Distribution';
+                        updates.datePaiement = firebase.firestore.FieldValue.delete();
+                        break;
+                    default:
+                        alert("Impossible d'annuler ce statut");
+                        return;
                 }
+                
+                await db.collection('clients').doc(id).update(updates);
+                await chargerDonnees();
+            } catch (error) {
+                console.error("Erreur lors de l'annulation:", error);
+                alert("Erreur lors de l'annulation.");
             }
-            
-            alert("Aucune action précédente trouvée pour ce client.");
         }
         
-        function annulerDerniereAction() {
-            if (actionHistory.length === 0) {
-                alert("Aucune action à annuler.");
-                return;
-            }
-            
-            const derniereAction = actionHistory.pop();
-            
-            if (derniereAction.type === 'ajout') {
-                // Supprimer le client ajouté
-                clients = clients.filter(c => c.id !== derniereAction.id);
-            } else if (derniereAction.type === 'suppression') {
-                // Restaurer le client supprimé
-                clients.push(derniereAction.client);
-            } else if (derniereAction.type === 'modification') {
-                // Restaurer l'état précédent
-                const client = clients.find(c => c.id === derniereAction.id);
-                if (client) {
-                    Object.assign(client, derniereAction.avant);
-                }
-            }
-            
-            sauvegarderDonnees();
-            afficherTableau();
-            alert("Dernière action annulée.");
-        }
-        
+        // Fonction pour marquer comme payé
         async function marquerPaye(id) {
             try {
                 await db.collection('clients').doc(id).update({
@@ -635,6 +618,7 @@
             }
         }
         
+        // Fonction pour supprimer un client
         async function supprimerClient(id) {
             if (confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
                 try {
@@ -647,6 +631,7 @@
             }
         }
 
+        // Fonction pour modifier le montant
         async function modifierMontant(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
@@ -665,6 +650,7 @@
             }
         }
 
+        // Fonction pour modifier le mois
         async function modifierMois(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
@@ -692,6 +678,7 @@
             }
         }
 
+        // Fonction pour modifier le commentaire
         async function modifierCommentaire(id) {
             const client = clients.find(c => c.id === id);
             if (!client) return;
